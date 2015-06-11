@@ -1,0 +1,5 @@
+# test1.in: expect a line of error message, because error vertex id
+# marks = 5
+
+V 5
+E {<3,4>,<4,6>}
