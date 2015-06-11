@@ -1,0 +1,14 @@
+Kafka:
+Is not applicable for our work, its scalable, ditributed. Used by linked in. 
+Nagios:
+Partially open source, did not get access to the full software. We ran the program. Its very efficient, but due to some complication to use it as open source, we did not use it further.
+logstash-
+We used logstash, its very useful..but it was generating log files with some predefined or user defined format. That was not exact need for our program. It use elasticsearch for storage.
+Splunlk:
+ITs helpful, but computationally very expensive.
+Apache Spark:
+Currently I am using it
+
+
+
+
