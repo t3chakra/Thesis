@@ -1,0 +1,120 @@
+#include <stdio.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+/* Parent process fork()-s a child. Beforehand, it sets up some shared memory
+ * to share with the child. They follow a synchronization protocol by which they
+ * check for the NULL byte before accessing the shared memory segment.
+ * This example is similar to the one in Chapter 5 of Advanced Linux Programming.
+ */
+
+#define	MAX_CHARS_EXCHANGED	10
+#define	SLEEP_TIME_SECS		1
+
+int
+main()
+{
+    int shm_id = -1;
+    char *c; /* We set up a shared memory for this char variable */
+
+    /* Allocate a shared memory segment of size sizeof(char). Set it to be
+     * readable (S_IRUSR -- see man 2 open), and writeable (S_IWUSR) by
+     * this user's processes.
+     */
+    shm_id = shmget(IPC_PRIVATE, sizeof(char), IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
+    if(shm_id < 0)
+    {
+	/* Could not get shared memory segment. Exit. */
+	perror("shmget"); return 0;
+    }
+
+    /* Attach our character pointer to the shared memory segment. This way, both
+     * the parent & child can share it.
+     */
+
+    c = shmat(shm_id, NULL, 0);
+    if (c == (void *)-1)
+    {
+	perror("shmat"); return 0;
+    }
+
+    /* Initialize to NULL */
+    *c = (char)NULL;
+
+    if (fork()) 
+    {
+	/* Parent */
+	unsigned char r; /* Randomly generated char. */
+	int urandom_fd = -1; 
+	int i; /* Loop variable */
+	int read_ret; /* To check return value from read() */
+
+	/* Generate a random char between a and z. Write it to *c */
+	urandom_fd = open("/dev/urandom", O_RDONLY);
+	if(urandom_fd < 0)
+	{
+	    perror("open(/dev/urandom)"); return 0;
+	}
+
+	for (i = 0; i < MAX_CHARS_EXCHANGED; i++)
+	{
+	    if (*c != (char)NULL)
+	    {
+		/* Child has not yet consumed previous character. Wait and try again. */
+
+		fprintf(stdout, "Parent waiting on child...\n"); fflush(stdout);
+		sleep(SLEEP_TIME_SECS);
+		i--; continue;
+	    }
+
+	    /* Else */
+	    read_ret = read(urandom_fd, &r, sizeof(char));
+	    if (read_ret < 1)
+	    {
+		/* Two cases: read_ret == 0, or read_ret < 0 */
+		if (read_ret == 0)
+		{
+		    fprintf(stderr, "Warning: read(/dev/urandom) returned 0 bytes.\n");
+		    fprintf(stderr, "Trying again...\n"); fflush(stderr);
+		    i--;
+		    continue;
+		}
+		else
+		{
+		    perror("read"); return 0;
+		}
+	    }
+	    else
+	    {
+		r %= ('z' - 'a'); *c = r + 'a';
+		fprintf(stdout, "Parent wrote Char # %d: %c\n", i+1, *c); fflush(stdout);
+	    }
+	}
+    }
+    else
+    {
+	/* Child */
+	int i; /* Loop variable */
+	for (i = 0; i < MAX_CHARS_EXCHANGED; i++)
+	{
+	    if (*c == (char)NULL)
+	    {
+		/* Parent has not yet written a new char. Wait and try again. */
+
+		fprintf(stdout, "Child waiting on parent...\n"); fflush(stdout);
+		sleep(SLEEP_TIME_SECS);
+		i--; continue;
+	    }
+
+	    /* Else */
+	    fprintf(stdout, "Child read Char # %d: %c\n", i+1, *c); fflush(stdout);
+	    *c = (char)NULL;
+	}
+    }
+
+    return 0;
+}

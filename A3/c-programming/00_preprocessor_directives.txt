@@ -1,0 +1,24 @@
+#include <stdio.h>
+#include "myInclude_2.h"
+
+#define	MAX_ARRAY_LEN	20
+#define myFavString "Facebook"
+#define DEBUG_SEVERE	0
+#define DEBUG_NORMAL	0
+#define DEBUG_LITE	1
+
+int
+main()
+{
+    struct myStruct s;
+
+#if DEBUG_SEVERE
+    printf("max array len = %d\n", MAX_ARRAY_LEN); fflush(stdout);
+#else
+#if DEBUG_NORMAL
+    printf("something happened\n"); fflush(stdout);
+#endif
+#endif
+    printf("my fav string is %s\n", myFavString); fflush(stdout);
+    return 0;
+}

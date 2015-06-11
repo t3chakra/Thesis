@@ -1,0 +1,27 @@
+#include <stdio.h>
+
+int
+main()
+{
+    int in;
+
+    while(scanf("%d", &in) > 0) 
+    {
+	switch(in) {
+	    case 0:
+		printf("you entered 0\n");
+		break;
+	    case 1:
+		printf("you like 1\n");
+		break;
+	    case 2:
+		printf("2 is what you entered\n");
+		break;
+	    default:
+		printf("something else\n");
+		break;
+	}
+    }
+
+    return 0;
+}

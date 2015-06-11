@@ -1,0 +1,39 @@
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+
+#define MAX_STR_LEN 20
+
+int
+main()
+{
+    char str_1[MAX_STR_LEN];
+    char str_2[MAX_STR_LEN];
+
+
+    bzero(str_1, MAX_STR_LEN);
+    bzero(str_2, MAX_STR_LEN);
+
+    fprintf(stdout, "Enter string 1: "); fflush(stdout);
+    fscanf(stdin, "%s", str_1);
+
+#if 0
+    fprintf(stderr, "Error: no error really.\n");
+#endif
+
+    printf("Enter string 2: "); fflush(stdout);
+    scanf("%s", str_2);
+
+    if (!strncmp(str_1, str_2, MAX_STR_LEN - 1)) 
+    {
+	printf("The two strings are the same.\n"); fflush(stdout);
+    }
+    else
+    {
+	printf("The two strings are different.\n"); fflush(stdout);
+    }
+
+    printf("strcmp() returns: %d\n", strcmp(str_1, str_2));
+
+    return 0;
+}
