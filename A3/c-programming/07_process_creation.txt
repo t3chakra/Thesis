@@ -1,0 +1,43 @@
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+/* Create a child process using fork(). Then, demonstrate address-space
+ * separation by accessing a variable that was allocated on the stack
+ * before fork() was invoked.
+ */
+
+int
+main()
+{
+    int in, f;
+
+    printf("Please enter an integer: "); fflush(stdout);
+    if (scanf("%d", &in) <= 0)
+    {
+	return 0;
+    }
+
+    in = 20;
+
+    f = fork();
+    if (f > 0)
+    {
+	/* Parent */
+	printf("I am the parent.\n"); fflush(stdout);
+	in += 50;
+	printf("in = %d, &in: 0x%08x\n", in, &in);
+	printf("Parent process exiting...\n"); fflush(stdout);
+    }
+    else /* f == 0 */
+    {
+	/* Child */
+	sleep(0);
+	printf("I am the child.\n"); fflush(stdout);
+	in += 25;
+	printf("in = %d, &in: 0x%08x\n", in, &in);
+	printf("Child process exiting...\n"); fflush(stdout);
+    }
+
+    return 0;
+}

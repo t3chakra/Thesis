@@ -1,0 +1,24 @@
+#include <stdio.h>
+
+int
+main()
+{
+    int i, in = 0;
+
+    for(i = 0; (i < 5) && (in >= 0); i++) 
+    {
+	if (scanf("%d", &in) <= 0)
+	{
+	    break;
+	}
+
+	if (in > 100) 
+	{
+	    continue;
+	}
+
+	printf("%d-th step -- You entered %d\n", i+1, in);
+    }
+
+    return 0;
+}

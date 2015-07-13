@@ -1,0 +1,134 @@
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <unistd.h>
+
+#define MIN_STR_LEN	10
+#define MAX_STR_LEN	20
+#define NUM_STR		10
+
+/* The following function takes as input a return value from read() and the
+   number of bytes we attempted to read() in size. It then terminates the process
+   if read() returned an error, or prints out an error message if read() read
+   fewer bytes that we wanted.
+
+   A return of 1 indicates that something bad happened in the read(), and a return
+   of 0 indicates that everything was fine.
+ */
+int check_error(int read_ret, int size)
+{
+    if (read_ret < size)
+    {
+	if (read_ret < 0)
+	{
+	    perror("read(urandom)"); exit(0);
+	}
+	else
+	{
+	    fprintf(stderr, "Warning: read() read fewer bytes than we wanted.\n");
+	    fflush(stderr);
+	    return 1;
+	}
+    }
+
+    return 0;
+}
+
+int main()
+{
+    int pipe_fd[2];
+    int i; /* Loop variable */
+
+    if (pipe(pipe_fd) < 0)
+    {
+	perror("pipe"); return 0;
+    }
+
+    if (fork())
+    {
+	int urandom_fd; /* FD for /dev/urandom */
+	/* Parent */
+
+	/* Do not need read end of pipe -- close it */
+	close(pipe_fd[0]);
+
+	/* Fuse write end of pipe with stdout */
+	if (dup2(pipe_fd[1], STDOUT_FILENO) < 0)
+	{
+	    perror("dup2(parent)"); return 0;
+	}
+
+	if ((urandom_fd = open("/dev/urandom", O_RDONLY)) < 0)
+	{
+	    perror("open"); return 0;
+	}
+
+	/* Generate NUM_STR random strings of chars a-z of length [MIN_STR_LEN, MAX_STR_LEN].
+	   Print those out to stdout.
+	 */
+	for (i = 0; i < NUM_STR; i++)
+	{
+	    int j; /* Loop variable */
+	    unsigned int str_size; /* size of string */
+	    unsigned char *s; /* string */
+	    int read_ret; /* return from read() */
+
+	    read_ret = read(urandom_fd, &str_size, sizeof(unsigned int));
+	    if (check_error(read_ret, sizeof(unsigned int)))
+	    {
+		i--; continue;
+	    }
+
+	    /* Else */
+	    str_size = (str_size % (MAX_STR_LEN - MIN_STR_LEN)) + MIN_STR_LEN;
+	    s = (char *)calloc(str_size + 1, sizeof(unsigned char));
+	    if (s == NULL)
+	    {
+		perror("calloc"); return 0;
+	    }
+
+	    bzero(s, str_size + 1);
+	    read_ret = read(urandom_fd, s, str_size);
+	    if (check_error(read_ret, str_size))
+	    {
+		i--; continue;
+	    }
+
+	    for (j = 0; j < str_size; j++)
+	    {
+		s[j] = (s[j] % ('z' - 'a')) + 'a';
+	    }
+
+	    printf("%s\n", s); fflush(stdout);
+	    fprintf(stderr, "Parent writing string: %s\n", s); fflush(stderr);
+	    free(s);
+	}
+
+	/* Finally, print an EOF */
+	printf("%d", EOF);
+	fprintf(stderr, "Parent exiting...\n"); fflush(stderr);
+    }
+    else
+    {
+	/* Child */
+
+	/* Do not need write end of pipe -- close it */
+	close(pipe_fd[1]);
+
+	if (dup2(pipe_fd[0], STDIN_FILENO) < 0)
+	{
+	    perror("dup2(pipe_fd[0])"); return 0;
+	}
+
+	/* Exec the python code */
+	if (execl("./Test.py","./Test.py", (char *)NULL) < 0)
+	{
+	    perror("execl"); return 0;
+	}
+    }
+
+    return 0;
+}

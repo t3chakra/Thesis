@@ -1,0 +1,6 @@
+# test2.in: expect a line of error message, because vertex not exist.
+# marks = 5
+
+V 7
+E {<1,2>,<2,3>,<3,4>,<3,5>}
+s 1 6 

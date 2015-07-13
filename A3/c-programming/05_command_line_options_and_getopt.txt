@@ -1,0 +1,47 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+void usage(char *progName)
+{
+    if (progName != NULL)
+    {
+	fprintf(stderr,
+		"Correct usage: %s [-s] <int> [-n] <int> -l <int>\n",
+		progName);
+    }
+}
+
+int
+main(int argc, char *argv[])
+{
+    char opt;
+
+    while((opt = getopt(argc, argv, "s:n:l:")) != -1)
+    {
+	switch(opt)
+	{
+	    int i;
+
+	    case 'n':
+		fprintf(stdout, "option n seen.\n");
+		i = atoi(optarg);
+		fprintf(stdout, "option value: %d\n", i);
+		break;
+	    case 's':
+		fprintf(stdout, "option s seen.\n");
+		fprintf(stdout, "option value: %s\n", optarg);
+		break;
+	    case 'l':
+		fprintf(stdout, "option l seen.\n");
+		fprintf(stdout, "option value: %s\n", optarg);
+		break;
+	    default:
+		fprintf(stderr, "Error: invalid option.\n");
+		usage(argv[0]);
+		break;
+	}
+    }
+
+    return 0;
+}

@@ -1,0 +1,75 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
+/* Parent sets up a pipe for use with its two children. It then fork()-s
+ * 2 children. Parent then reads two characters from stdin and prints them
+ * out. One child prints the character "2" to stdout. The other takes input
+ * a char from its stdin, and prints that to stdout.
+ */
+
+int
+main()
+{
+    int pipe_fd[2]; /* Look at man 2 pipe */
+
+    if(pipe(pipe_fd) < 0) {
+	perror("pipe"); return 0;
+    }
+
+    if (fork()) 
+    {
+	if (fork())
+	{
+	    char c;
+
+	    /* Parent */
+	    close(pipe_fd[1]); 
+
+	    if(dup2(pipe_fd[0], STDIN_FILENO) < 0) {
+		perror("dup2(parent)"); return 0;
+	    }
+
+	    fscanf(stdin, "%c", &c); fprintf(stdout, "hi 1st Parent read: %c\n", c);
+	    fscanf(stdin, "%c", &c); fprintf(stdout, "hi 2nd Parent read: %c\n", c);
+
+	    fprintf(stdout, "Parent exiting...\n"); fflush(stdout);
+	}
+	else {
+	    /* Child 2 *///sleep(5);
+	    close(pipe_fd[0]);
+
+	    if(dup2(pipe_fd[1], STDOUT_FILENO) < 0) {
+		perror("dup2(child2)"); return 0;
+	    }
+
+	    fprintf(stdout, "2"); fflush(stdout);
+	    fprintf(stderr, "Child 2 exiting...\n"); fflush(stderr);
+	}
+    }
+    else
+    {
+	char c;
+	/* Child 1 */
+	close(pipe_fd[0]);
+
+	fprintf(stdout, "Please enter a char: "); fflush(stdout);
+
+	if(dup2(pipe_fd[1], STDOUT_FILENO) < 0) {
+	    perror("dup2(child1)"); return 0;
+	}
+
+	if(fscanf(stdin, "%c", &c) < 0) {
+	    perror("scanf"); return 0;
+	}
+
+	fprintf(stdout, "%c", c); fflush(stdout);
+	fprintf(stderr, "Child 1 exiting...\n"); fflush(stderr);
+    }
+	
+    return 0;
+}
+

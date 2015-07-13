@@ -1,0 +1,123 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+/* Parent fork()-s a child. Then the two of them communicate using a pipe that is
+ * created beforehand by the parent. The parent writes to the pipe only. The child
+ * reads from the pipe only.
+ */
+
+#define	MAX_CHARS_EXCHANGED	10
+#define	SLEEP_TIME_SECS		1
+
+int
+main()
+{
+    int pipe_fd[2]; /* Look at man 2 pipe */
+
+    if (pipe(pipe_fd) < 0)
+    {
+	perror("pipe"); return 0;
+    }
+
+    if (fork()) 
+    {
+	/* Parent */
+	unsigned char r; /* Randomly generated char. */
+	int urandom_fd = -1; 
+	int i; /* Loop variable */
+	int read_ret; /* To check return value from read() */
+
+	/* Parent does not need read end of pipe -- close it. */
+	close(pipe_fd[0]);
+
+	urandom_fd = open("/dev/urandom", O_RDONLY);
+	if(urandom_fd < 0)
+	{
+	    perror("open(/dev/urandom)"); return 0;
+	}
+
+	for (i = 0; i < MAX_CHARS_EXCHANGED; i++)
+	{
+	    read_ret = read(urandom_fd, &r, sizeof(char));
+	    if (read_ret < 1)
+	    {
+		/* Two cases: read_ret == 0, or read_ret < 0 */
+		if (read_ret == 0)
+		{
+		    fprintf(stderr, "Warning: read(/dev/urandom) returned 0 bytes.\n");
+		    fprintf(stderr, "Trying again...\n"); fflush(stderr);
+		    i--;
+		    continue;
+		}
+		else
+		{
+		    perror("read"); return 0;
+		}
+	    }
+	    else
+	    {
+		int write_ret; /* return from write() */
+
+		r %= ('z' - 'a'); r += 'a';
+		write_ret = write(pipe_fd[1], &r, sizeof(char));
+		if (write_ret < 1)
+		{
+		    if (write_ret == 0)
+		    {
+			fprintf(stderr, "Warning: write(pipe_fd[1]) wrote 0 bytes.\n");
+			fprintf(stderr, "Trying again...\n"); fflush(stderr);
+			i--; continue;
+		    }
+		    else 
+		    {
+			perror("write"); return 0;
+		    }
+		}
+		else
+		{
+		    fsync(pipe_fd[1]); /* Similar to fflush() */
+		    fprintf(stdout, "Parent wrote Char # %d: %c\n", i+1, r); fflush(stdout);
+		}
+	    }
+	}
+    }
+    else
+    {
+	/* Child */
+	int i; /* Loop variable */
+
+	/* Child does not need write end of pipe -- close it */
+	close(pipe_fd[1]);
+
+	for (i = 0; i < MAX_CHARS_EXCHANGED; i++)
+	{
+	    char c; /* Char that we read from pipe */
+	    int read_ret; /* return from read */
+
+	    read_ret = read(pipe_fd[0], &c, sizeof(char));
+	    if (read_ret < 1)
+	    {
+		if (read_ret == 0)
+		{
+		    fprintf(stderr, "Warning: read(pipe_fd[0]) read 0 bytes.\n");
+		    fprintf(stderr, "Trying again...\n"); fflush(stderr);
+		    i--; continue;
+		}
+		else
+		{
+		    perror("read(pipe)"); return 0;
+		}
+	    }
+	    else
+	    {
+		fprintf(stdout, "Child read Char # %d: %c\n", i+1, c); fflush(stdout);
+	    }
+	}
+    }
+
+    return 0;
+}
+
